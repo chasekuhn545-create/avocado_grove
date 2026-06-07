@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <style>
+
+</style>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+  <title>avocado grove</title>
+    <link rel="stylesheet" href="stylesheet/stylesheet.css">
+ 
+</head>
+
+
+<body style="background-color:rgb(21, 26, 41); text-align: center;">
+
+
+
+    <div class="h1cont">
+
+  <div class="left-links">
+    <a href="underconstruction.html">
+      <img src="images-ui-/bio.webp" class="h1buddy">
+    </a>
+    <a href="underconstruction.html">
+      <video src="images-ui-/idle.webm" class="h1buddy" autoplay loop muted playsinline></video>
+    </a>
+  </div>
+<pre>
+  <h1>Welcome to my Digital Garden</h1>
+
+  </pre>
+
+  <div class="right-links">
+    <a href="soc.html">
+      <video src="images-ui-/soc.webm" class="h1buddy2" autoplay loop muted playsinline></video>
+    </a>
+    <a href="underconstruction.html">
+      <img src="images-ui-/music.webp" class="h1buddy2">
+    </a>
+  </div>
+
+</div>
+
+<div class="gallery">
+
+  <div class="gallery-item">
+  <img src="nwfrms/tree.webp" data-link="nwfrms/gallery.html">
+</div>
+
+   <div class="gallery-item">
+    <img src="photos/body/conditiontolive.webp" data-gallery="flesh2">
+  </div>
+
+  
+
+  <div class="gallery-item double-column">
+    <img src="photos/body/handportraits-7.webp" data-gallery="body">
+  </div>
+
+  <div class="gallery-item">
+  <img src="nwfrms/G46A7959.webp" data-link="nwfrms/gallery.html">
+</div>
+  
+<div class="gallery-item double-column">
+  <img src="photos/windows/windows.webp" data-gallery="windows">
+</div>
+
+<div class="gallery-item">
+  <img src="photos/WILLARD/willardcvr.webp" data-gallery="WILLARD">
+</div>
+  
+<div class="gallery-item double-column">
+  <img src="photos/lads photo album/ladscvr.webp" data-link="underconstruction.html">
+</div>
+
+ 
+ 
+
+  
+
+   
+
+
+
+   
+
+  
+    
+  
+
+
+
+ 
+   
+  
+
+
+
+
+</div>
+
+
+
+
+
+<script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
+<script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+<script>
+
+
+
+
+
+
+  const grid = document.querySelector('.gallery');
+
+  
+  
+
+
+
+
+  imagesLoaded(grid, () => {
+    new Masonry(grid, {
+      itemSelector: '.gallery-item',
+      columnWidth: '.gallery-item',
+      percentPosition: true,
+      gutter: 0
+    });
+  });
+</script>
+
+<!-- Lightbox -->
+<div id="lightbox" style="display:none;">
+  <img id="lightbox-prev" src="images-ui-/pointerback.gif">
+  <img id="lightbox-img"><video id="lightbox-vid" autoplay loop muted playsinline style="display:none;max-height:80vh;max-width:80vw;"></video>
+<div id="lens">
+</div>
+  <img id="lightbox-next" src="images-ui-/pointfwrd.gif">
+</div>
+
+
+<script>
+const galleries = {
+  body: [
+    "photos/body/hair.webp",
+   
+    "photos/body/arms, abstracted.webp",
+    
+  
+    "photos/body/Layer 1.avif",
+    "photos/body/Layer 2.avif",
+    
+    
+   
+    "photos/body/theleginquestion.webm",
+   
+    "photos/body/handportraits-3.webp",
+    "photos/body/handportraits-6.webp",
+    "photos/body/handportraits-7.webp",
+    "photos/body/handportraits-8.webp",
+    "photos/body/handportraits.webp",
+    
+    "photos/body/cut.webm",
+    "photos/body/pointerfinger1.webm",
+   
+    
+  ],
+  WILLARD: [
+    "photos/WILLARD/prvw3.webp",
+    "photos/WILLARD/prvw1.webp",
+    "photos/WILLARD/prvw2.webp",
+    "photos/WILLARD/prvw4.webp",
+    "photos/WILLARD/prvw5.webp",
+    "photos/WILLARD/prvw6.webp",
+  ],
+
+  flesh2: [ "photos/body/conditiontolive.webp",
+"photos/body/cndtnspread2.webp", "photos/body/cyanxray.webp", "photos/body/retnalfrm.webp", "photos/body/spread.webp", "photos/body/slappy1.webp",
+"photos/body/leg.webp", "photos/body/cndtnspread.webp", "photos/body/table.webp",
+  ],
+
+  windows: [
+"photos/windows/window1.webp", "photos/windows/window2.webp", "photos/windows/window3.webp", "photos/windows/window4.webp", "photos/windows/window5.webp", "photos/windows/window6.webp", "photos/windows/window7.webp", "photos/windows/window8.webp",
+  ],
+};
+
+
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
+const prevBtn = document.getElementById("lightbox-prev");
+const nextBtn = document.getElementById("lightbox-next");
+
+
+
+/* Open */
+const triggers = document.querySelectorAll(".gallery-item img");
+
+let currentGroup = [];
+let currentIndex = 0;
+
+triggers.forEach(img => {
+  img.addEventListener("click", () => {
+    if (img.dataset.link) {
+      window.location.href = img.dataset.link;
+      return;
+    }
+
+    const galleryName = img.dataset.gallery;
+    if (!galleryName || !galleries[galleryName]) return;
+
+    currentGroup = galleries[galleryName];
+    currentIndex = 0;
+
+    showImage();
+    lightbox.style.display = "flex";
+    lightbox.classList.add("active");
+    document.body.style.overflow = "hidden";
+  });
+});
+
+function showImage() {
+  const src = images ? images[currentIndex].src : currentGroup[currentIndex];
+  const vid = document.getElementById("lightbox-vid");
+  if (src.endsWith(".webm") || src.endsWith(".mp4")) {
+    lightboxImg.style.display = "none";
+    vid.style.display = "block";
+    vid.src = src;
+    vid.play();
+  } else {
+    vid.style.display = "none";
+    vid.src = "";
+    lightboxImg.style.display = "block";
+    lightboxImg.src = src;
+  }
+} else {
+    vid.style.display = "none";
+    vid.src = "";
+    lightboxImg.style.display = "block";
+    lightboxImg.src = src;
+  }
+}
+
+
+/* Close when clicking outside */
+lightbox.addEventListener("click", e => {
+  if (e.target === lightbox) {
+    lightbox.style.display = "none";
+    lightbox.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+});
+
+/* Navigation */
+prevBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  currentIndex = (currentIndex - 1 + currentGroup.length) % currentGroup.length;
+  showImage();
+});
+
+nextBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  currentIndex = (currentIndex + 1) % currentGroup.length;
+  showImage();
+});
+
+/* Keyboard */
+document.addEventListener("keydown", e => {
+  if (lightbox.style.display !== "flex") return;
+
+  if (e.key === "ArrowRight") nextBtn.click();
+  if (e.key === "ArrowLeft") prevBtn.click();
+  if (e.key === "Escape") {
+    lightbox.style.display = "none";
+    lightbox.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+});
+
+const lens = document.getElementById("lens");
+
+
+lightboxImg.addEventListener("mouseenter", () => {
+  lens.style.display = "block";
+  });
+
+lightboxImg.addEventListener("mouseleave", () => {
+  lens.style.display = "none";
+});
+
+const zoom = 8;
+
+lightboxImg.addEventListener("mousemove", e => {
+  const rect = lightboxImg.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const px = x / rect.width;
+  const py = y / rect.height;
+
+  const lensSize = 200;
+
+  lens.style.display = "block";
+  lens.style.left = e.clientX - lensSize / 2 + "px";
+  lens.style.top  = e.clientY - lensSize / 2 + "px";
+
+  lens.style.backgroundImage = `url(${lightboxImg.src})`;
+
+  // FISHEYE DISTORTION
+  const dx = px - 0.5;
+  const dy = py - 0.5;
+  const r = Math.sqrt(dx * dx + dy * dy);
+  const distortion = Math.exp(-r * 4);
+
+  const fx = px + dx * distortion * 0.5;
+  const fy = py + dy * distortion * 0.5;
+
+  lens.style.backgroundSize = `${zoom * 130}%`;
+  lens.style.backgroundPosition =
+    `${fx * 100}% ${fy * 100}%`;
+});
+
+lightboxImg.addEventListener("mouseleave", () => {
+  lens.style.display = "none";
+});
+
+</script>
+
+ 
+</body>
+</html>

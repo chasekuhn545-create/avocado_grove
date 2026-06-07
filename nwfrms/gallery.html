@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0a0a0a;
+    cursor: none;
+  }
+
+  #back {
+    position: fixed;
+    top: 1.5rem; right: 2rem;
+    z-index: 100;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.18);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    transition: color 0.4s ease;
+    cursor: none;
+  }
+  #back:hover { color: rgba(255,255,255,0.55); }
+
+  #stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100vh;
+  }
+
+  .img-slot {
+    position: relative;
+    height: 80vh;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .img-slot img {
+    height: 100%;
+    width: auto;
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  #lens {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    z-index: 50;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  #lens-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-repeat: no-repeat;
+  }
+
+  #lens-frame {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    z-index: 51;
+    border-radius: 500%;
+  }
+
+  #lens-frame img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: fill;
+  }
+
+
+</style>
+</head>
+<body>
+
+
+
+<div id="stage">
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="tree.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="bridge.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="squirrel2.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="squirrel.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="rails.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="G46A7959.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="G46A7869.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="tower3.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="tower2.webp" alt="">
+  </div>
+  <div class="img-slot" id="slot-0">
+    <img id="img-0" src="tower.webp" alt="">
+  </div>
+
+</div>
+
+<div id="lens"><div id="lens-inner"></div></div>
+<div id="lens-frame"><img id="frame-img" src="" alt=""></div>
+
+
+<script>
+const LENS_SIZE = 320;
+const ZOOM = 5.5;
+const FRAME_SIZE = LENS_SIZE * 1.75;
+const EXIT_BUFFER = LENS_SIZE * 0.55;
+
+const lens = document.getElementById('lens');
+const lensInner = document.getElementById('lens-inner');
+const lensFrame = document.getElementById('lens-frame');
+const frameImg = document.getElementById('frame-img');
+
+
+lens.style.width = LENS_SIZE + 'px';
+lens.style.height = LENS_SIZE + 'px';
+lensFrame.style.width = FRAME_SIZE + 'px';
+lensFrame.style.height = FRAME_SIZE + 'px';
+
+const FRAMES = 
+  ['1.webp','2.webp','3.webp','4.webp','5.webp','6.webp','7.webp','8.webp','9.webp','10.webp','11.webp','12.webp','13.webp','14.webp','15.webp','16.webp','17.webp','18.webp','19.webp','20.webp','21.webp','22.webp','23.webp','24.webp','25.webp','26.webp','27.webp','28.webp','29.webp','30.webp','31.webp','32.webp','33.webp','34.webp','35.webp','36.webp','37.webp','38.webp','39.webp','40.webp','41.webp','42.webp','43.webp','44.webp','45.webp','46.webp','47.webp','48.webp','49.webp','50.webp','51.webp','52.webp','53.webp','54.webp','55.webp','56.webp','57.webp','58.webp','59.webp','60.webp','61.webp','62.webp','63.webp','64.webp','65.webp','66.webp','67.webp','68.webp','69.webp','70.webp','71.webp','72.webp','73.webp','74.webp','75.webp','76.webp','77.webp','78.webp','79.webp','80.webp','81.webp','82.webp','83.webp','84.webp','85.webp','86.webp','87.webp','88.webp','89.webp','90.webp','91.webp','92.webp','93.webp','94.webp','95.webp','96.webp','97.webp','98.webp','99.webp','100.webp','101.webp'];
+ 
+
+const slots = [];
+document.querySelectorAll('.img-slot').forEach((slot, i) => {
+  const img = slot.querySelector('img');
+  slots.push({ slot, img, index: i });
+});
+
+let activeSlot = null;
+let frameIndex = 0;
+let lastX = 0, lastY = 0;
+let velocity = 0;
+let lensVisible = false;
+
+function showLens() {
+  if (!lensVisible) {
+    lens.style.display = 'block';
+    lensFrame.style.display = 'block';
+  
+    lensVisible = true;
+  }
+}
+
+function hideLens() {
+  if (lensVisible) {
+    lens.style.display = 'none';
+    lensFrame.style.display = 'none';
+    
+    lensVisible = false;
+    activeSlot = null;
+  }
+}
+
+function updateLens(mx, my, slot) {
+  const img = slot.img;
+  const rect = img.getBoundingClientRect();
+
+  const relX = mx - rect.left;
+  const relY = my - rect.top;
+
+  lens.style.left = (mx - LENS_SIZE / 2) + 'px';
+  lens.style.top  = (my - LENS_SIZE / 2) + 'px';
+
+  lensFrame.style.left = (mx - FRAME_SIZE / 2) + 'px';
+  lensFrame.style.top  = (my - FRAME_SIZE / 2) + 'px';
+
+  const bgX = -(relX * ZOOM - LENS_SIZE / 2);
+  const bgY = -(relY * ZOOM - LENS_SIZE / 2);
+  lensInner.style.backgroundImage    = `url('${img.src}')`;
+  lensInner.style.backgroundSize     = `${rect.width * ZOOM}px ${rect.height * ZOOM}px`;
+  lensInner.style.backgroundPosition = `${bgX}px ${bgY}px`;
+}
+
+function tickFrame() {
+  const speed = Math.min(velocity, 60);
+  frameIndex = (frameIndex + speed * 0.3) % FRAMES.length;
+  frameImg.src = FRAMES[Math.floor(frameIndex)];
+  velocity *= 0.85;
+}
+
+function onMouseMove(e) {
+  const mx = e.clientX;
+  const my = e.clientY;
+
+  const dx = mx - lastX;
+  const dy = my - lastY;
+  velocity = Math.sqrt(dx * dx + dy * dy);
+  lastX = mx;
+  lastY = my;
+
+
+
+  let hoveredSlot = null;
+  for (const slot of slots) {
+    const rect = slot.img.getBoundingClientRect();
+    if (mx >= rect.left && mx <= rect.right && my >= rect.top && my <= rect.bottom) {
+      hoveredSlot = slot;
+      break;
+    }
+  }
+
+  if (hoveredSlot) {
+    if (activeSlot !== hoveredSlot) {
+      activeSlot = hoveredSlot;
+      frameIndex = 0;
+    }
+    showLens();
+    updateLens(mx, my, hoveredSlot);
+    tickFrame();
+  } else {
+    if (activeSlot) {
+      const rect = activeSlot.img.getBoundingClientRect();
+      const distLeft   = rect.left - mx;
+      const distRight  = mx - rect.right;
+      const distTop    = rect.top - my;
+      const distBottom = my - rect.bottom;
+      if (Math.max(distLeft, distRight, distTop, distBottom) > EXIT_BUFFER) {
+        hideLens();
+      }
+    } else {
+      hideLens();
+    }
+  }
+}
+
+document.addEventListener('mousemove', onMouseMove);
+document.addEventListener('mouseleave', hideLens);
+
+function preloadFrames() {
+  FRAMES.forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+}
+
+preloadFrames();
+</script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    min-height: 100vh;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #animation-stage {
+    width: 400px;
+    height: 400px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  #animation-stage img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  #animation-stage img.active {
+    opacity: 1;
+  }
+
+  #pw-input {
+    width: 240px;
+    background: #000;
+    border: 1px solid #fff;
+    color: #fff;
+    font-family: monospace;
+    font-size: 14px;
+    letter-spacing: 0.25em;
+    padding: 10px 14px;
+    outline: none;
+    caret-color: #fff;
+    display: block;
+  }
+
+  #pw-input:disabled {
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+
+<div id="animation-stage">
+  
+
+    <img src="nwfrms/1.webp" alt="">
+    <img src="nwfrms/2.webp" alt="">
+    <img src="nwfrms/3.webp" alt="">
+    <img src="nwfrms/4.webp" alt="">
+    <img src="nwfrms/5.webp" alt="">
+    <img src="nwfrms/6.webp" alt="">
+    <img src="nwfrms/7.webp" alt="">
+   
+ 
+
+   
+</div>
+
+<input id="pw-input" type="text" maxlength="40" autocomplete="off" spellcheck="false" />
+
+<script>
+  /*
+  ============================================================
+    CONFIGURATION — edit everything in this block
+  ============================================================
+  */
+
+  const PASSWORD = "ilovelads";
+
+  // File paths for redirect pages (relative to this file)
+  const SUCCESS_FILE = "underconstruction.html";
+  const FAIL_FILE    = "underconstruction.html";
+
+  /*
+    SOUNDS
+    Provide file paths to your own audio files.
+    hit_sound   — plays on each correct letter
+    back_sound  — plays on backspace
+    success_sound — plays when full password is entered
+  */
+  const SOUNDS = {
+    hit:     "sounds/hit.ogg",
+    back:    "sounds/back.ogg",
+    success: "sounds/success.ogg",
+    fail: "sounds/fail.ogg",
+  };
+
+  /*
+    ANIMATION
+    The images in #animation-stage are indexed 0, 1, 2...
+    step 0  = no correct letters yet  → show image[0]
+    step 1  = 1 correct letter        → show image[1]
+    ...and so on.
+
+    If you want multiple frames to play between each step
+    (e.g. a smooth 3-frame transition per letter),
+    set FRAMES_PER_STEP to that number and add enough <img> tags.
+    The current frame shown = currentStep * FRAMES_PER_STEP.
+    Set to 1 for a direct 1-frame-per-letter mapping.
+  */
+  const FRAMES_PER_STEP = 1;
+
+  /*
+    ANIMATION END BEHAVIOUR
+    Once the animation reaches its final frame AND the password
+    is still wrong, the user is redirected to FAIL_FILE.
+    This triggers when step reaches MAX_STEPS.
+    By default this equals PASSWORD.length (one step per letter).
+    Increase if you added extra frames beyond the password length.
+  */
+  const MAX_STEPS = PASSWORD.length;
+
+  /*
+  ============================================================
+    ENGINE — no need to edit below this line
+  ============================================================
+  */
+
+  const input  = document.getElementById("pw-input");
+  const frames = Array.from(document.querySelectorAll("#animation-stage img"));
+
+  let currentStep = 0;
+  let animStep = 0;
+  let redirected  = false;
+
+  const audioCache = {};
+  function loadSound(key) {
+    if (!SOUNDS[key]) return null;
+    if (!audioCache[key]) {
+      audioCache[key] = new Audio(SOUNDS[key]);
+    }
+    return audioCache[key];
+  }
+  // Preload
+  Object.keys(SOUNDS).forEach(loadSound);
+
+  function playSound(key) {
+    const audio = loadSound(key);
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
+  function showFrame(step) {
+    const frameIndex = step * FRAMES_PER_STEP;
+    frames.forEach((img, i) => {
+      img.classList.toggle("active", i === frameIndex);
+    });
+  }
+
+  function countCorrectLetters(value) {
+    let count = 0;
+    for (let i = 0; i < value.length && i < PASSWORD.length; i++) {
+      if (value[i] === PASSWORD[i]) count++;
+    }
+    return count;
+  }
+
+  function redirect(file) {
+    if (redirected) return;
+    redirected = true;
+    window.location.href = file;
+  }
+
+  // Show first frame on load
+  showFrame(0);
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Backspace") {
+     animStep++;
+showFrame(animStep);
+playSound("back");
+
+    }
+  });
+
+  input.addEventListener("input", function() {
+    if (redirected) return;
+
+    const val  = input.value;
+    const hits = countCorrectLetters(val);
+
+    // New correct letter(s) added
+    if (hits > currentStep) {
+      currentStep = hits;
+        animStep++;   
+      playSound("hit");
+      showFrame(animStep);
+    }
+
+    // Password correct — success
+    if (val === PASSWORD) {
+      playSound("success");
+      input.disabled = true;
+      setTimeout(() => redirect(SUCCESS_FILE), 800);
+      return;
+    }
+
+    // Animation exhausted — fail
+    if (animStep >= MAX_STEPS && val !== PASSWORD) {
+      playSound("fail");
+      input.disabled = true;
+      setTimeout(() => redirect(FAIL_FILE), 800);
+    }
+  });
+
+  input.focus();
+</script>
+</body>
+</html>
