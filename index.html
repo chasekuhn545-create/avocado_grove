@@ -221,7 +221,7 @@ triggers.forEach(img => {
 });
 
 function showImage() {
-  const src = images ? images[currentIndex].src : currentGroup[currentIndex];
+  const src = currentGroup[currentIndex];
   const vid = document.getElementById("lightbox-vid");
   if (src.endsWith(".webm") || src.endsWith(".mp4")) {
     lightboxImg.style.display = "none";
@@ -234,13 +234,7 @@ function showImage() {
     lightboxImg.style.display = "block";
     lightboxImg.src = src;
   }
-} else {
-    vid.style.display = "none";
-    vid.src = "";
-    lightboxImg.style.display = "block";
-    lightboxImg.src = src;
-  }
-}
+
 
 
 /* Close when clicking outside */
