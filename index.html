@@ -226,10 +226,19 @@ triggers.forEach(img => {
 function showImage() {
   const src = currentGroup[currentIndex];
   const vid = document.getElementById("lightbox-vid");
-  if (src.endsWith(".webm") || src.endsWith(".mp4")) {
+
+  if (typeof src === "object") {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    lightboxImg.style.display = "none";
+    vid.style.display = "block";
+    vid.src = isSafari ? src.mov : src.webm;
+    vid.load();
+    vid.play();
+  } else if (src.endsWith(".webm") || src.endsWith(".mp4")) {
     lightboxImg.style.display = "none";
     vid.style.display = "block";
     vid.src = src;
+    vid.load();
     vid.play();
   } else {
     vid.style.display = "none";
