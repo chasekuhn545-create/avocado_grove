@@ -329,6 +329,12 @@ lightboxImg.addEventListener("mousemove", e => {
 lightboxImg.addEventListener("mouseleave", () => {
   lens.style.display = "none";
 });
+	// Force autoplay on header videos
+document.querySelectorAll('.h1buddy, .h1buddy2').forEach(el => {
+  if (el.tagName === 'VIDEO') {
+    el.play().catch(() => {});
+  }
+});
 
 </script>
 
