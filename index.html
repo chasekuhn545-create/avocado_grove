@@ -233,7 +233,7 @@ function showImage() {
     vid.style.display = "block";
     vid.src = isSafari ? src.mov : src.webm;
     vid.load();
-    vid.play();
+vid.play().catch(() => {});
   } else if (src.endsWith(".webm") || src.endsWith(".mp4")) {
     lightboxImg.style.display = "none";
     vid.style.display = "block";
