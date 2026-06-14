@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+	<script>
+  if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    window.location.replace("mobilebnb.html");
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>hunter</title>
@@ -199,6 +204,11 @@
   @keyframes trophy-in {
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
+	<script>
+  if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    window.location.replace("mobile.html");
+  }
+</script>
 </style>
 </head>
 <body>
@@ -286,15 +296,15 @@ const FRAMES = Array.from({length:101}, (_,i) => `${i+1}.webp`);
 //     download: filename to trigger on kill   e.g. "reward0.mp3"
 //     (leave src:"" to use the colored placeholder blob)
 const CREATURE_DEFS = [
-  { id:0, name:"creature_0", src:"handbird1.gif", download:"blond.mp3", color:"#e05252" },
-  { id:1, name:"creature_1", src:"handbird2.gif", download:"dual.mp3", color:"#e09052" },
-  { id:2, name:"creature_2", src:"handbird3.gif", download:"kickassspot.mp3", color:"#e0d852" },
-  { id:3, name:"creature_3", src:"handbird4.gif", download:"notheone.mp3", color:"#7ae052" },
-  { id:4, name:"creature_4", src:"handbird5.gif", download:"sum1else.mp3", color:"#52e0b8" },
-  { id:5, name:"creature_5", src:"handbird6.gif", download:"used_2.mp3", color:"#52a0e0" },
-  { id:6, name:"creature_6", src:"handbird7.gif", download:"warble.mp3", color:"#8052e0" },
-  { id:7, name:"creature_7", src:"handbird8.gif", download:"young.mp3", color:"#d052e0" },
-  { id:8, name:"creature_8", src:"handbird9.gif", download:"Screenshot 2025-11-10 at 11.21.57 PM.mp3", color:"#e05290" },
+  { id:0, src:"handbird1.gif", download:"blond.mp3", color:"#e05252" },
+  { id:1, src:"handbird2.gif", download:"dual.mp3", color:"#e09052" },
+  { id:2, src:"handbird3.gif", download:"kickassspot.mp3", color:"#e0d852" },
+  { id:3, src:"handbird4.gif", download:"notheone.mp3", color:"#7ae052" },
+  { id:4, src:"handbird5.gif", download:"sum1else.mp3", color:"#52e0b8" },
+  { id:5, src:"handbird6.gif", download:"used_2.mp3", color:"#52a0e0" },
+  { id:6, src:"handbird7.gif", download:"warble.mp3", color:"#8052e0" },
+  { id:7, src:"handbird8.gif", download:"young.mp3", color:"#d052e0" },
+  { id:8, src:"handbird9.gif", download:"Screenshot 2025-11-10 at 11.21.57 PM.mp3", color:"#e05290" },
 ];
 
 // [5] CHARACTER IDLES — 16 gifs for the 4x4 cursor grid
@@ -466,7 +476,7 @@ function killCreature(id) {
   gifKeeper.appendChild(c.imgEl);
   setTimeout(() => c.el.remove(), 900);
 
-  triggerDownload(CREATURE_DEFS[id].download, CREATURE_DEFS[id].name);
+  triggerDownload(CREATURE_DEFS[id].download, CREATURE_DEFS[id].download);
 
   // Add to trophy row — create fresh img, set src after append so browser starts GIF fresh in DOM
   const trophyRow = document.getElementById('trophy-row');
