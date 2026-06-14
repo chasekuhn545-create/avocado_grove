@@ -8,16 +8,15 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   html, body {
-    width: 100%; height: 100%;
+    width: 100%;
     background: #0a0a0a;
     color: #f0ede8;
     font-family: Georgia, serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    padding: 2.5rem 1.5rem 3rem;
     min-height: 100vh;
-    padding: 2rem 1.5rem;
   }
 
   #cover {
@@ -26,42 +25,48 @@
     aspect-ratio: 1;
     object-fit: cover;
     display: block;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
   }
 
-  #download-btn {
+  #track-list {
     width: 100%;
     max-width: 340px;
-    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .track-btn {
+    display: block;
+    width: 100%;
+    padding: 0.85rem 1rem;
     background: none;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.15);
     color: #f0ede8;
     font-family: Georgia, serif;
     font-style: italic;
-    font-size: 1rem;
-    letter-spacing: 0.08em;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-decoration: none;
     cursor: pointer;
-    transition: border-color 0.3s, color 0.3s;
+    transition: border-color 0.25s, color 0.25s;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #download-btn:hover {
-    border-color: rgba(255,255,255,0.6);
+  .track-btn:hover,
+  .track-btn:active {
+    border-color: rgba(255,255,255,0.55);
     color: #fff;
   }
 
-  #download-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-
-  #status {
-    margin-top: 1rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.12em;
+  .track-num {
+    font-style: normal;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
     color: rgba(255,255,255,0.3);
+    margin-right: 0.6rem;
     font-family: 'Courier New', monospace;
-    min-height: 1.2em;
-    text-align: center;
   }
 </style>
 </head>
@@ -69,52 +74,17 @@
 
 <img id="cover" src="images-ui-/bnbcvr.webp" alt="">
 
-<button id="download-btn">download</button>
+<div id="track-list">
+  <a class="track-btn" href="blond.mp3" download="blond.mp3"><span class="track-num">01</span>blond</a>
+  <a class="track-btn" href="used_2.mp3" download="used_2.mp3"><span class="track-num">02</span>used_2</a>
+  <a class="track-btn" href="young.mp3" download="young.mp3"><span class="track-num">03</span>young</a>
+  <a class="track-btn" href="warble.mp3" download="warble.mp3"><span class="track-num">04</span>warble</a>
+  <a class="track-btn" href="notheone.mp3" download="notheone.mp3"><span class="track-num">05</span>notheone</a>
+  <a class="track-btn" href="dual.mp3" download="dual.mp3"><span class="track-num">06</span>dual</a>
+  <a class="track-btn" href="sum1else.mp3" download="sum1else.mp3"><span class="track-num">07</span>sum1else</a>
+  <a class="track-btn" href="Screenshot 2025-11-10 at 11.21.57 PM.mp3" download="Screenshot 2025-11-10 at 11.21.57 PM.mp3"><span class="track-num">08</span>Screenshot 2025-11-10 at 11.21.57 PM</a>
+  <a class="track-btn" href="kickassspot.mp3" download="kickassspot.mp3"><span class="track-num">09</span>kickassspot</a>
+</div>
 
-<div id="status"></div>
-
-<script>
-const FILES = [
-  "blond.mp3",
-  "dual.mp3",
-  "kickassspot.mp3",
-  "notheone.mp3",
-  "sum1else.mp3",
-  "used_2.mp3",
-  "warble.mp3",
-  "young.mp3",
-  "Screenshot 2025-11-10 at 11.21.57 PM.mp3",
-];
-
-const btn    = document.getElementById('download-btn');
-const status = document.getElementById('status');
-
-btn.addEventListener('click', async () => {
-  btn.disabled = true;
-  for (let i = 0; i < FILES.length; i++) {
-    const file = FILES[i];
-    status.textContent = `downloading ${i + 1} / ${FILES.length}…`;
-    try {
-      const res  = await fetch(file);
-      if (!res.ok) throw new Error(`${res.status}`);
-      const blob    = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href     = blobUrl;
-      a.download = file;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-      // small gap between downloads so the browser doesn't batch-block them
-      await new Promise(r => setTimeout(r, 800));
-    } catch (err) {
-      console.warn('failed:', file, err);
-    }
-  }
-  status.textContent = 'done.';
-  btn.disabled = false;
-});
-</script>
 </body>
 </html>
