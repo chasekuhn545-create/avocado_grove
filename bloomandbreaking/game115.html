@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hunter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0a0a0a;
+    cursor: none;
+    user-select: none;
+  }
+
+  /* ── Background photo — fills screen, invisible to user directly ── */
+  #bg-img {
+    position: fixed;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    pointer-events: none;
+    /* swap src in HTML below */
+  }
+
+  /* ── Creatures — hidden by default, revealed only inside lens via canvas ── */
+  .creature {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0; /* always invisible in page */
+  }
+
+  .creature img {
+    width: 200%;
+    height: 200%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .creature.dying {
+    animation: fall 0.75s ease-in forwards;
+  }
+
+  @keyframes fall {
+    0%   { transform: translateY(0)    rotate(0deg);  opacity: 0; }
+    15%  { opacity: 1; }
+    100% { transform: translateY(130vh) rotate(45deg); opacity: 0; }
+  }
+
+  /* ── Platform ── */
+  #platform {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 100%;
+    height: 12.5vh;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  #platform-asset {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+  }
+
+  #character {
+    position: fixed;
+    z-index: 25;
+    width: 130px;
+    height: 130px;
+    bottom: 17.5vh;
+    left: 6vw;
+    pointer-events: none;
+  }
+
+  #character img   { position: absolute; inset: 0; width: 400%; height: 400%; object-fit: contain; display: none; }
+  #character canvas{ position: absolute; inset: 0; display: block; }
+
+  /* ── Lens ── */
+  #lens {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    z-index: 22;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  #lens-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-repeat: no-repeat;
+    position: relative;
+  }
+
+  #lens-creature-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* ── Frame ring ── */
+  #lens-frame {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    z-index: 23;
+    border-radius: 50%;
+  }
+
+  #lens-frame img {
+    width: 100%; height: 100%;
+    display: block;
+    object-fit: fill;
+  }
+
+  /* ── Crosshair (inside lens, centered on cursor) ── */
+  #crosshair {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    z-index: 24;
+    transform: translate(-50%, -50%);
+  }
+
+  #crosshair.locked circle { stroke: rgba(255,60,60,0.95); filter: drop-shadow(0 0 5px rgba(255,40,40,0.9)); }
+  #crosshair.locked line   { stroke: rgba(255,60,60,0.95); }
+  #crosshair.locked .dot   { fill:   rgba(255,60,60,0.95); }
+
+  /* ── HUD ── */
+  #counter {
+    position: fixed;
+    top: 1.4rem; left: 2rem;
+    z-index: 60;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.2);
+  }
+
+  #back {
+    position: fixed;
+    top: 1.4rem; right: 2rem;
+    z-index: 60;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.14);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    transition: color 0.4s;
+    cursor: none;
+  }
+  #back:hover { color: rgba(255,255,255,0.45); }
+
+  #flash {
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.07);
+    pointer-events: none;
+    z-index: 55;
+    opacity: 0;
+  }
+  #flash.pop { animation: flashpop 0.2s ease-out forwards; }
+  @keyframes flashpop { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ── Trophy row ── */
+  #trophy-row {
+    position: fixed;
+    bottom: 8px;
+    right: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+    z-index: 22;
+    pointer-events: none;
+  }
+
+  .trophy {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    opacity: 0;
+    transform: translateY(12px) scale(0.6);
+    animation: trophy-in 0.35s ease-out forwards;
+  }
+
+  @keyframes trophy-in {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<!-- [1] BACKGROUND PHOTO — swap filename, keep it in the same folder as this file -->
+<img id="bg-img" src="lrbatch1-8312.webp" alt="">
+
+<a id="back" href="index.html">← back</a>
+<div id="counter">0 / 9</div>
+<div id="flash"></div>
+
+<div id="creatures"></div>
+
+<!-- [2] PLATFORM STRIP — swap filename, keep it in the same folder as this file -->
+<div id="platform">
+  <img id="platform-asset" src="lrbatch1-7873.webp" alt="">
+</div>
+
+<!-- Character — sits above platform in lower left -->
+<div id="character">
+  <img id="char-img" src="" alt="">
+  <canvas id="char-canvas" width="130" height="130"></canvas>
+</div>
+
+<!-- Trophy row — killed creatures appear here -->
+<div id="trophy-row"></div>
+
+<!-- Hidden keeper: removed creature imgs live here so the browser never
+     interrupts GIF playback for same-src lens overlays -->
+<div id="gif-keeper" style="position:fixed;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;z-index:-1;"></div>
+
+<div id="lens">
+  <div id="lens-inner">
+  </div>
+</div>
+
+<div id="lens-frame"><img id="frame-img" src="" alt=""></div>
+
+<div id="crosshair">
+  <svg width="74" height="74" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="32" y1="4"  x2="32" y2="18" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="32" y1="46" x2="32" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="4"  y1="32" x2="18" y2="32" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="46" y1="32" x2="60" y2="32" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <circle class="dot" cx="32" cy="32" r="2.5" fill="rgba(255,255,255,0.75)"/>
+  </svg>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
+
+const LENS_SIZE   = 280;
+const ZOOM        = 1.8; 
+const FRAME_SIZE  = LENS_SIZE * 1.72;
+const EXIT_BUFFER = LENS_SIZE * 0.5;
+const CH_RADIUS   = 28;    // crosshair hit radius px
+const MIN_ALIVE   = 2;
+const MAX_ALIVE   = 5;
+const PLATFORM_H  = 0.125; // bottom 1/8 of screen
+
+// ── Creature definitions ──────────────────────────────────
+// src: path to your gif
+// download: file that gets triggered on kill
+// color: placeholder color
+// ═══════════════════════════════════════════════════════════
+//  ASSET PATHS — everything lives flat in the same folder
+//  as this HTML file. Just fill in the filenames.
+// ═══════════════════════════════════════════════════════════
+
+// [1] BACKGROUND — the photo shown through the lens
+//     set the src on the <img id="bg-img"> tag in the HTML above
+
+// [2] PLATFORM STRIP — image/gif across the bottom 1/8
+//     set the src on the <img id="platform-asset"> tag in the HTML above
+
+// [3] LENS FRAME RING — 101 sequential webp frames (same files as gallery)
+//     named 1.webp, 2.webp ... 101.webp, all in the same folder
+const FRAMES = Array.from({length:101}, (_,i) => `${i+1}.webp`);
+
+// [4] CREATURES — 9 total, each needs a gif and a download file
+//     src:      filename of the creature gif  e.g. "critter0.gif"
+//     download: filename to trigger on kill   e.g. "reward0.mp3"
+//     (leave src:"" to use the colored placeholder blob)
+const CREATURE_DEFS = [
+  { id:0, name:"creature_0", src:"handbird1.gif", download:"blond.mp3", color:"#e05252" },
+  { id:1, name:"creature_1", src:"handbird2.gif", download:"dual.mp3", color:"#e09052" },
+  { id:2, name:"creature_2", src:"handbird3.gif", download:"kickassspot.mp3", color:"#e0d852" },
+  { id:3, name:"creature_3", src:"handbird4.gif", download:"notheone.mp3", color:"#7ae052" },
+  { id:4, name:"creature_4", src:"handbird5.gif", download:"sum1else.mp3", color:"#52e0b8" },
+  { id:5, name:"creature_5", src:"handbird6.gif", download:"used_2.mp3", color:"#52a0e0" },
+  { id:6, name:"creature_6", src:"handbird7.gif", download:"warble.mp3", color:"#8052e0" },
+  { id:7, name:"creature_7", src:"handbird8.gif", download:"young.mp3", color:"#d052e0" },
+  { id:8, name:"creature_8", src:"handbird9.gif", download:"Screenshot 2025-11-10 at 11.21.57 PM.mp3", color:"#e05290" },
+];
+
+// [5] CHARACTER IDLES — 16 gifs for the 4x4 cursor grid
+//     zones go left→right, top→bottom (0=top-left, 15=bottom-right)
+//     leave "" to use the colored placeholder
+const CHAR_IDLE = [
+  "topL.gif","topml.gif","topmr.gif","topR.gif",  // row 0  (cursor in top quarter of screen)
+  "upmidl.gif","upmidml.gif","upmidmr.gif","upmidr.gif",  // row 1
+  "lowmidL.gif","lowmidml.gif","lowmidmr.gif","lowmidR.gif",  // row 2
+  "bottomL.gif","bottommL.gif","bottommR.gif","bottomR.gif",  // row 3  (cursor in bottom quarter of screen)
+];
+
+// [6] CHARACTER KILL REACTIONS — 3 gifs, one plays randomly on each kill
+const CHAR_KILL = [ "cel1.gif", "", "" ];
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let lastX  = mouseX, lastY = mouseY;
+let velocity   = 0;
+let frameIndex = 0;
+let killed     = 0;
+let lensVisible = false;
+let charKillTimer = null;
+
+const aliveCreatures = new Set();
+const deadCreatures  = new Set();
+const creatures      = {}; // id -> { el, imgEl, x, y, vx, vy, size, alive }
+
+// ═══════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════
+
+const lens          = document.getElementById('lens');
+const lensInner     = document.getElementById('lens-inner');
+const lensFrame     = document.getElementById('lens-frame');
+const frameImg      = document.getElementById('frame-img');
+const crosshair     = document.getElementById('crosshair');
+const counter       = document.getElementById('counter');
+const flash         = document.getElementById('flash');
+const charCanvas    = document.getElementById('char-canvas');
+const charImg       = document.getElementById('char-img');
+const charCtx       = charCanvas.getContext('2d');
+const bgImg         = document.getElementById('bg-img');
+
+lens.style.width  = LENS_SIZE + 'px';
+lens.style.height = LENS_SIZE + 'px';
+lensFrame.style.width  = FRAME_SIZE + 'px';
+lensFrame.style.height = FRAME_SIZE + 'px';
+
+// ═══════════════════════════════════════════════════════════
+//  PLACEHOLDER HELPERS
+// ═══════════════════════════════════════════════════════════
+
+const placeholderCache = {};
+function getPlaceholder(color) {
+  if (placeholderCache[color]) return placeholderCache[color];
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(32,32,28,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath(); ctx.arc(23,22,7,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(41,22,7,0,Math.PI*2); ctx.fill();
+  placeholderCache[color] = c;
+  return c;
+}
+
+function drawCharPlaceholder(label, color) {
+  charCtx.clearRect(0,0,130,130);
+  charCtx.fillStyle = color;
+  charCtx.beginPath(); charCtx.ellipse(65,78,28,38,0,0,Math.PI*2); charCtx.fill();
+  charCtx.beginPath(); charCtx.arc(65,32,20,0,Math.PI*2); charCtx.fill();
+  charCtx.fillStyle = '#0a0a0a';
+  charCtx.font = 'bold 9px monospace';
+  charCtx.textAlign = 'center';
+  charCtx.fillText(label, 65, 122);
+}
+
+drawCharPlaceholder('idle', '#8899bb');
+
+// ═══════════════════════════════════════════════════════════
+//  CREATURE SPAWNING
+// ═══════════════════════════════════════════════════════════
+
+function spawnCreature(id) {
+  // Hard guard — never spawn dead or already alive creatures
+  if (aliveCreatures.has(id) || deadCreatures.has(id)) return;
+  const def  = CREATURE_DEFS[id];
+  const size = 102 + Math.random() * 36;
+  const safeBottom = window.innerHeight * (1 - PLATFORM_H) - size;
+  const x = size + Math.random() * (window.innerWidth  - size * 2);
+  const y = size + Math.random() * (safeBottom - size * 2);
+
+  const el = document.createElement('div');
+  el.className = 'creature';
+  el.style.width  = size + 'px';
+  el.style.height = size + 'px';
+
+  const imgEl = document.createElement('img');
+  imgEl.src = def.src || getPlaceholder(def.color).toDataURL();
+  el.appendChild(imgEl);
+  document.getElementById('creatures').appendChild(el);
+
+  // Assign this creature's permanent movement style
+  const style = MOVE_STYLES[id];
+  const spd   = style === 'bounce' ? 7.2
+              : style === 'dart'   ? 3.5
+              : style === 'creep'  ? 4.0
+              : style === 'ghost'  ? 2.5
+              : 3.5 + Math.random() * 1.5;
+  const angle = Math.random() * Math.PI * 2;
+
+  creatures[id] = {
+    el, imgEl,
+    x, y, size,
+    vx: Math.cos(angle) * spd,
+    vy: Math.sin(angle) * spd,
+    style,
+    t: 0,
+    alive: true,
+  };
+
+  aliveCreatures.add(id);
+
+  // Create lens overlay immediately so the GIF starts playing right away
+  ensureLensOverlay(id);
+}
+
+function maintainPopulation() {
+  if (deadCreatures.size >= 9) return;
+  const available = CREATURE_DEFS.map(d=>d.id)
+    .filter(id => !aliveCreatures.has(id) && !deadCreatures.has(id));
+  const target  = MIN_ALIVE + Math.floor(Math.random() * (MAX_ALIVE - MIN_ALIVE + 1));
+  const toSpawn = Math.min(target - aliveCreatures.size, available.length);
+  for (let i = 0; i < toSpawn; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    spawnCreature(available.splice(idx, 1)[0]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KILLING
+// ═══════════════════════════════════════════════════════════
+
+function killCreature(id) {
+  if (!aliveCreatures.has(id)) return;
+  const c = creatures[id];
+  c.alive = false;
+  aliveCreatures.delete(id);
+  deadCreatures.add(id);
+  killed++;
+	if (killed >= 9) {
+  document.body.style.filter = 'invert(1)';
+}
+  counter.textContent = `${killed} / 9`;
+
+  // make visible for death anim
+  c.el.style.opacity = '1';
+  c.el.classList.add('dying');
+  // Move imgEl to the keeper div *before* removing the creature element,
+  // so the browser never sees a same-src GIF disappear from the DOM —
+  // which would stutter/restart the matching lens-overlay GIF.
+  const gifKeeper = document.getElementById('gif-keeper');
+  gifKeeper.appendChild(c.imgEl);
+  setTimeout(() => c.el.remove(), 900);
+
+  triggerDownload(CREATURE_DEFS[id].download, CREATURE_DEFS[id].name);
+
+  // Add to trophy row — create fresh img, set src after append so browser starts GIF fresh in DOM
+  const trophyRow = document.getElementById('trophy-row');
+  const trophy = document.createElement('img');
+  trophy.className = 'trophy';
+  trophy.style.width = '60px';
+  trophy.style.height = '60px';
+  trophyRow.appendChild(trophy);
+  // Set src after appending so the browser initialises the GIF while it's live in the DOM
+  setTimeout(() => {
+    trophy.src = CREATURE_DEFS[id].src || getPlaceholder(CREATURE_DEFS[id].color).toDataURL();
+  }, 50);
+
+  flash.style.animation = 'none';
+  requestAnimationFrame(() => {
+    flash.style.animation = '';
+    flash.classList.remove('pop');
+    flash.classList.add('pop');
+  });
+
+  playCharKill();
+
+  if (deadCreatures.size < 9) {
+    setTimeout(maintainPopulation, 1800 + Math.random() * 2000);
+  }
+}
+
+function triggerDownload(url, name) {
+  if (!url) return;
+  const a = document.createElement('a');
+  a.href     = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOVEMENT LOOP — 9 distinct personalities
+// ═══════════════════════════════════════════════════════════
+
+const MOVE_STYLES = [
+  'soar',    // 0
+  'zigzag',  // 1
+  'erratic', // 2
+  'dart',    // 3
+  'spiral',  // 4
+  'creep',   // 5
+  'bounce',  // 6
+  'sweep',   // 7
+  'ghost',   // 8 — avoids cursor, hardest
+];
+
+function moveCreatures() {
+  const safeBottom = window.innerHeight * (1 - PLATFORM_H);
+  const W = window.innerWidth;
+  const H = safeBottom;
+
+  for (const id of aliveCreatures) {
+    const c = creatures[id];
+    if (!c || !c.alive) continue;
+
+    c.t = (c.t || 0) + 1;
+
+    switch (c.style) {
+      case 'soar':
+        c.vx += Math.sin(c.t * 0.018) * 0.18;
+        c.vy += Math.cos(c.t * 0.013) * 0.15;
+        clampSpeed(c, 5.5, 4.0);
+        break;
+
+      case 'zigzag':
+        // flip every 14 frames for sharp snappy zigs
+        if (c.t % 14 === 0) c.vx *= -1;
+        if (c.t % 19 === 0) c.vy *= -1;
+        c.vx += (Math.random() - 0.5) * 0.4;
+        c.vy += (Math.random() - 0.5) * 0.4;
+        clampSpeed(c, 6.5, 4.5);
+        break;
+
+      case 'erratic':
+        c.vx += (Math.random() - 0.5) * 0.7;
+        c.vy += (Math.random() - 0.5) * 0.7;
+        clampSpeed(c, 6.5, 3.5);
+        break;
+
+      case 'dart':
+        if (c.t % 50 === 0) {
+          const a = Math.random() * Math.PI * 2;
+          c.vx = Math.cos(a) * 11;
+          c.vy = Math.sin(a) * 11;
+        }
+        c.vx *= 0.96;
+        c.vy *= 0.96;
+        clampSpeed(c, 11, 0.5);
+        break;
+
+      case 'spiral':
+        c.vx += Math.cos(c.t * 0.045) * 0.28;
+        c.vy += Math.sin(c.t * 0.045) * 0.28;
+        clampSpeed(c, 5.5, 3.5);
+        break;
+
+      case 'creep':
+        // was too slow — bumped up significantly
+        c.vx += (Math.random() - 0.5) * 0.35;
+        c.vy += (Math.random() - 0.5) * 0.35;
+        clampSpeed(c, 3.5, 2.0);
+        break;
+
+      case 'bounce':
+        clampSpeed(c, 7.5, 7.0);
+        break;
+
+      case 'sweep':
+        c.vx += (Math.random() - 0.5) * 0.15;
+        c.vy += (Math.random() - 0.5) * 0.4;
+        if (Math.abs(c.vx) < 3.5) c.vx *= 1.4;
+        clampSpeed(c, 6.0, 3.5);
+        break;
+
+      case 'ghost': {
+        // actively flee the cursor when lens is nearby
+        const cx = c.x + c.size / 2;
+        const cy = c.y + c.size / 2;
+        const dx = cx - mouseX;
+        const dy = cy - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const fleeRadius = LENS_SIZE * 1.8;
+
+        if (dist < fleeRadius && dist > 0) {
+          // flee force — stronger the closer the cursor
+          const force = (1 - dist / fleeRadius) * 1.4;
+          c.vx += (dx / dist) * force;
+          c.vy += (dy / dist) * force;
+        } else {
+          // when not fleeing, wander normally
+          c.vx += (Math.random() - 0.5) * 0.25;
+          c.vy += (Math.random() - 0.5) * 0.25;
+        }
+        clampSpeed(c, 7.0, 3.0);
+        break;
+      }
+    }
+
+    c.x += c.vx;
+    c.y += c.vy;
+
+    if (c.x < 0)          { c.x = 0;          c.vx = Math.abs(c.vx); }
+    if (c.x > W - c.size) { c.x = W - c.size; c.vx = -Math.abs(c.vx); }
+    if (c.y < 0)          { c.y = 0;          c.vy = Math.abs(c.vy); }
+    if (c.y > H - c.size) { c.y = H - c.size; c.vy = -Math.abs(c.vy); }
+
+    c.el.style.left = c.x + 'px';
+    c.el.style.top  = c.y + 'px';
+  }
+
+  if (lensVisible) drawCreaturesInLens(mouseX, mouseY, 
+    -(mouseX / window.innerWidth  * window.innerWidth  * ZOOM - LENS_SIZE/2),
+    -(mouseY / window.innerHeight * window.innerHeight * ZOOM - LENS_SIZE/2),
+    window.innerWidth  * ZOOM,
+    window.innerHeight * ZOOM
+  );
+  requestAnimationFrame(moveCreatures);
+}
+function clampSpeed(c, max, min) {
+  const spd = Math.sqrt(c.vx * c.vx + c.vy * c.vy);
+  if (spd > max) { c.vx *= max / spd; c.vy *= max / spd; }
+  if (spd < min && spd > 0) { c.vx *= min / spd; c.vy *= min / spd; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LENS
+// ═══════════════════════════════════════════════════════════
+
+function updateLens(mx, my) {
+  if (!lensVisible) {
+    lens.style.display      = 'block';
+    lensFrame.style.display = 'block';
+    lensVisible = true;
+  }
+
+  lens.style.left = (mx - LENS_SIZE/2) + 'px';
+  lens.style.top  = (my - LENS_SIZE/2) + 'px';
+  lensFrame.style.left = (mx - FRAME_SIZE/2) + 'px';
+  lensFrame.style.top  = (my - FRAME_SIZE/2) + 'px';
+
+  // Background photo inside lens
+  const iw = window.innerWidth;
+  const ih = window.innerHeight;
+  const relX = mx / iw;
+  const relY = my / ih;
+
+  const bgW = iw * ZOOM;
+  const bgH = ih * ZOOM;
+  const bgX = -(relX * bgW - LENS_SIZE/2);
+  const bgY = -(relY * bgH - LENS_SIZE/2);
+
+  lensInner.style.backgroundImage    = `url('${bgImg.src}')`;
+  lensInner.style.backgroundSize     = `${bgW}px ${bgH}px`;
+  lensInner.style.backgroundPosition = `${bgX}px ${bgY}px`;
+
+  // Draw creatures visible inside lens
+  drawCreaturesInLens(mx, my, bgX, bgY, bgW, bgH);
+}
+
+// Persistent lens overlay elements — created once per creature at spawn time,
+// never removed, just repositioned and shown/hidden each frame.
+const lensOverlays = {};
+
+function ensureLensOverlay(id) {
+  if (lensOverlays[id]) return lensOverlays[id];
+  const c = creatures[id];
+  const el = document.createElement('img');
+  el.src = c.imgEl.src;
+  el.style.cssText = `
+    position: absolute;
+    width: ${c.size}px;
+    height: ${c.size}px;
+    object-fit: contain;
+    pointer-events: none;
+    display: none;
+  `;
+  lensInner.appendChild(el);
+  lensOverlays[id] = el;
+  return el;
+}
+
+function drawCreaturesInLens(mx, my, bgX, bgY, bgW, bgH) {
+  for (const id in lensOverlays) {
+    lensOverlays[id].style.display = 'none';
+  }
+
+  for (const id of aliveCreatures) {
+    const c = creatures[id];
+    if (!c || !c.alive) continue;
+
+    const cx = c.x + c.size / 2;
+    const cy = c.y + c.size / 2;
+    const dx = cx - mx;
+    const dy = cy - my;
+    if (Math.sqrt(dx * dx + dy * dy) > LENS_SIZE / 2 + c.size / 2) continue;
+
+    const lx = (cx / window.innerWidth)  * bgW + bgX - c.size / 2;
+    const ly = (cy / window.innerHeight) * bgH + bgY - c.size / 2;
+
+    const overlay = ensureLensOverlay(id);
+    overlay.style.display = 'block';
+    overlay.style.left = lx + 'px';
+    overlay.style.top  = ly + 'px';
+  }
+}
+
+function hideLens() {
+  if (lensVisible) {
+    lens.style.display      = 'none';
+    lensFrame.style.display = 'none';
+    lensVisible = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FRAME ANIMATION
+// ═══════════════════════════════════════════════════════════
+
+function tickFrame() {
+  const speed = Math.min(velocity, 55);
+  frameIndex  = (frameIndex + speed * 0.28) % FRAMES.length;
+  const src   = FRAMES[Math.floor(frameIndex)];
+  if (frameImg.getAttribute('data-src') !== src) {
+    frameImg.src = src;
+    frameImg.setAttribute('data-src', src);
+  }
+  velocity *= 0.84;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CROSSHAIR
+// ═══════════════════════════════════════════════════════════
+
+function updateCrosshair(mx, my) {
+  crosshair.style.display = 'block';
+  crosshair.style.left    = mx + 'px';
+  crosshair.style.top     = my + 'px';
+
+  let locked = false;
+  for (const id of aliveCreatures) {
+    const c = creatures[id];
+    if (!c || !c.alive) continue;
+    const cx = c.x + c.size/2;
+    const cy = c.y + c.size/2;
+    const dist = Math.sqrt((cx-mx)**2 + (cy-my)**2);
+    const inLens = dist < LENS_SIZE/2;
+    if (inLens && dist < c.size * 0.4) { locked = true; break; }
+  }
+  crosshair.classList.toggle('locked', locked);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SHOOTING
+// ═══════════════════════════════════════════════════════════
+
+document.addEventListener('click', () => {
+  for (const id of [...aliveCreatures]) {
+    const c = creatures[id];
+    if (!c || !c.alive) continue;
+    const cx   = c.x + c.size/2;
+    const cy   = c.y + c.size/2;
+    const dist = Math.sqrt((cx-mouseX)**2 + (cy-mouseY)**2);
+    const inLens = dist < LENS_SIZE/2;
+    if (inLens && dist < c.size * 0.4) {
+      killCreature(id);
+      break;
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  CHARACTER
+// ═══════════════════════════════════════════════════════════
+
+function getZone(mx, my) {
+  const col = Math.min(Math.floor(mx / window.innerWidth  * 4), 3);
+  const row = Math.min(Math.floor(my / window.innerHeight * 4), 3);
+  return row * 4 + col;
+}
+
+function showCharGif(src) {
+  if (src) {
+    charCanvas.style.display = 'none';
+    charImg.style.display    = 'block';
+    if (charImg.getAttribute('data-current') !== src) {
+      charImg.src = src;
+      charImg.setAttribute('data-current', src);
+    }
+  } else {
+    charCanvas.style.display = 'block';
+    charImg.style.display    = 'none';
+  }
+}
+
+function updateCharIdle(mx, my) {
+  if (charKillTimer) return;
+  const zone = getZone(mx, my);
+  const src  = CHAR_IDLE[zone] || '';
+  if (src) {
+    showCharGif(src);
+  } else {
+    // placeholder: tint by zone
+    charCanvas.style.display = 'block';
+    charImg.style.display    = 'none';
+    const hue = (zone / 16) * 360;
+    drawCharPlaceholder(`z${zone}`, `hsl(${hue},50%,60%)`);
+  }
+}
+
+function playCharKill() {
+  const available = CHAR_KILL.filter(g => g);
+  if (!available.length) return; // no kill GIFs configured — leave idle GIF untouched
+
+  const src = available[Math.floor(Math.random() * available.length)];
+  showCharGif(src);
+
+  if (charKillTimer) clearTimeout(charKillTimer);
+  charKillTimer = setTimeout(() => {
+    charKillTimer = null;
+    updateCharIdle(mouseX, mouseY);
+  }, 3200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOUSE
+// ═══════════════════════════════════════════════════════════
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+
+  const dx = mouseX - lastX;
+  const dy = mouseY - lastY;
+  velocity = Math.sqrt(dx*dx + dy*dy);
+  lastX = mouseX; lastY = mouseY;
+
+  updateLens(mouseX, mouseY);
+  updateCrosshair(mouseX, mouseY);
+  updateCharIdle(mouseX, mouseY);
+  tickFrame();
+});
+
+document.addEventListener('mouseleave', hideLens);
+
+// ═══════════════════════════════════════════════════════════
+//  PRELOAD + INIT
+// ═══════════════════════════════════════════════════════════
+
+FRAMES.forEach(src => { const i = new Image(); i.src = src; });
+
+maintainPopulation();
+moveCreatures();
+</script>
+</body>
+</html>
