@@ -332,6 +332,8 @@ let frameIndex = 0;
 let killed     = 0;
 let lensVisible = false;
 let charKillTimer = null;
+let lastTime = 0;
+const FRAME_MS = 1000 / 60; // cap loop to 60 fps regardless of monitor refresh rate
 
 const aliveCreatures = new Set();
 const deadCreatures  = new Set();
@@ -530,7 +532,11 @@ const MOVE_STYLES = [
   'ghost',   // 8 — avoids cursor, hardest
 ];
 
-function moveCreatures() {
+function moveCreatures(timestamp = 0) {
+  const delta = timestamp - lastTime;
+  if (delta < FRAME_MS) { requestAnimationFrame(moveCreatures); return; }
+  lastTime = timestamp - (delta % FRAME_MS);
+
   const safeBottom = window.innerHeight * (1 - PLATFORM_H);
   const W = window.innerWidth;
   const H = safeBottom;
